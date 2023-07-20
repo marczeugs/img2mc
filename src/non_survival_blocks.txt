@@ -1,0 +1,8 @@
+bedrock
+budding_amethyst
+structure_block
+structure_block_corner
+structure_block_data
+structure_block_load
+structure_block_save
+reinforced_deepslate_side

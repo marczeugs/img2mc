@@ -1,0 +1,3 @@
+[submodule "DeltaE"]
+	path = DeltaE
+	url = .\\DeltaE\\
