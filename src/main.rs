@@ -63,9 +63,6 @@ fn main() -> eyre::Result<()> {
 
     tracing::info!("Processing chunks...");
 
-    let chunk_width = source_image.width() as usize / cli_arguments.chunk_resolution;
-    let chunk_height = source_image.width() as usize / cli_arguments.chunk_resolution;
-
     let progress_counter = Arc::new(AtomicUsize::new(0));
 
     print!("[{: <70}]", "");
@@ -73,11 +70,11 @@ fn main() -> eyre::Result<()> {
     let inner_progress_counter = progress_counter.clone();
 
     let progress_bar_updater_thread = thread::spawn(move || {
-        while inner_progress_counter.load(atomic::Ordering::Relaxed) != chunk_width * chunk_height {
+        while inner_progress_counter.load(atomic::Ordering::Relaxed) != block_width * cli_arguments.block_height {
             print!(
                 "\r[{: <70}] {:.2}% ",
-                "#".repeat((inner_progress_counter.load(atomic::Ordering::Relaxed) as f32 / (chunk_width * chunk_height) as f32 * 70.0).round() as usize),
-                inner_progress_counter.load(atomic::Ordering::Relaxed) as f32 / (chunk_width * chunk_height) as f32 * 100.0
+                "#".repeat((inner_progress_counter.load(atomic::Ordering::Relaxed) as f32 / (block_width * cli_arguments.block_height) as f32 * 70.0).round() as usize),
+                inner_progress_counter.load(atomic::Ordering::Relaxed) as f32 / (block_width * cli_arguments.block_height) as f32 * 100.0
             );
             io::stdout().flush().unwrap();
 
@@ -85,9 +82,9 @@ fn main() -> eyre::Result<()> {
         }
     });
 
-    for chunk_y in 0..chunk_width {
-        for chunk_x in 0..chunk_height {
-                let mut error_by_texture = chunk_average_color_map.par_iter()
+    for chunk_y in 0..cli_arguments.block_height {
+        for chunk_x in 0..block_width {
+            let mut error_by_texture = chunk_average_color_map.par_iter()
                 .map(|(texture_name, texture_color_map)| {
                     // Calculate the error between every chunk in the source image and the block texture
                     let mut texture_error = 0.0;
@@ -138,6 +135,10 @@ fn main() -> eyre::Result<()> {
 
             let (lowest_error_texture, _) = error_by_texture[0];
             output_blocks[chunk_x][chunk_y] = lowest_error_texture.clone();
+
+            if lowest_error_texture == "" {
+                panic!("asdf {}", lowest_error_texture);
+            }
 
             // Calculating residual quantization error
             let rgba_by_coords_in_block_texture = chunk_average_color_map[lowest_error_texture].iter()
