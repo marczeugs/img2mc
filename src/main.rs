@@ -1,5 +1,9 @@
+use std::{fs, io, thread};
 use std::cmp::Ordering;
-use std::fs;
+use std::io::Write;
+use std::sync::{Arc, atomic};
+use std::sync::atomic::AtomicUsize;
+use std::time::Duration;
 
 use color_eyre::eyre;
 use color_eyre::eyre::eyre;
@@ -56,9 +60,34 @@ fn main() -> eyre::Result<()> {
 
     let dithering_total_weight: usize = dithering_matrix.iter().flat_map(|n| n).sum();
 
-    for chunk_y in 0..(source_image.height() as usize / cli_arguments.chunk_resolution) {
-        for chunk_x in 0..(source_image.width() as usize / cli_arguments.chunk_resolution) {
-            let mut error_by_texture = chunk_average_color_map.par_iter()
+
+    tracing::info!("Processing chunks...");
+
+    let chunk_width = source_image.width() as usize / cli_arguments.chunk_resolution;
+    let chunk_height = source_image.width() as usize / cli_arguments.chunk_resolution;
+
+    let progress_counter = Arc::new(AtomicUsize::new(0));
+
+    print!("[{}]", " ".repeat(70));
+
+    let inner_progress_counter = progress_counter.clone();
+
+    let progress_bar_updater_thread = thread::spawn(move || {
+        while inner_progress_counter.load(atomic::Ordering::Relaxed) != chunk_width * chunk_height {
+            print!(
+                "\r[{: <70}] {:.2}% ",
+                "#".repeat((inner_progress_counter.load(atomic::Ordering::Relaxed) as f32 / (chunk_width * chunk_height) as f32 * 70.0).round() as usize),
+                inner_progress_counter.load(atomic::Ordering::Relaxed) as f32 / (chunk_width * chunk_height) as f32 * 100.0
+            );
+            io::stdout().flush().unwrap();
+
+            thread::sleep(Duration::from_millis(100));
+        }
+    });
+
+    for chunk_y in 0..chunk_width {
+        for chunk_x in 0..chunk_height {
+                let mut error_by_texture = chunk_average_color_map.par_iter()
                 .map(|(texture_name, texture_color_map)| {
                     // Calculate the error between every chunk in the source image and the block texture
                     let mut texture_error = 0.0;
@@ -149,8 +178,13 @@ fn main() -> eyre::Result<()> {
                     }
                 }
             }
+
+            progress_counter.fetch_add(1, atomic::Ordering::Relaxed);
         }
     }
+
+    progress_bar_updater_thread.join().unwrap();
+    print!("\r");
 
 
     match cli_arguments.output_path.extension().ok_or(eyre!("Output path does not have a file extension."))? {
