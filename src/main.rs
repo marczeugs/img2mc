@@ -68,7 +68,7 @@ fn main() -> eyre::Result<()> {
 
     let progress_counter = Arc::new(AtomicUsize::new(0));
 
-    print!("[{}]", " ".repeat(70));
+    print!("[{: <70}]", "");
 
     let inner_progress_counter = progress_counter.clone();
 
@@ -184,7 +184,8 @@ fn main() -> eyre::Result<()> {
     }
 
     progress_bar_updater_thread.join().unwrap();
-    print!("\r");
+    print!("{: <80}\r", "\r");
+    io::stdout().flush()?;
 
 
     match cli_arguments.output_path.extension().ok_or(eyre!("Output path does not have a file extension."))? {

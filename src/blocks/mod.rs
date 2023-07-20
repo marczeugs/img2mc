@@ -54,7 +54,7 @@ pub fn get_block_textures(texture_filtering_mode: &TextureFilteringMode, block_t
             match texture_filtering_mode {
                 TextureFilteringMode::AllowList(allowed_textures) => {
                     result.and_then(|(name, texture)| {
-                        if allowed_textures.contains(&name) {
+                        if allowed_textures.contains(&block_id.into()) {
                             Some((name, TextureWithBlockState {
                                 texture,
                                 block_id: block_id.into(),
@@ -67,7 +67,7 @@ pub fn get_block_textures(texture_filtering_mode: &TextureFilteringMode, block_t
                 }
                 TextureFilteringMode::BlockList(blocked_textures) => {
                     result.and_then(|(name, texture)| {
-                        if blocked_textures.contains(&name) {
+                        if blocked_textures.contains(&block_id.into()) {
                             None
                         } else {
                             Some((name, TextureWithBlockState {
