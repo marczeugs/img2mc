@@ -8,21 +8,29 @@ use serde::Serialize;
 use crate::blocks::TextureWithBlockState;
 use crate::cli_arguments::CliArguments;
 
-pub fn make_bytes(block_width: usize, cli_arguments: &CliArguments, output_blocks: &Vec<Vec<String>>, block_textures_and_states: &HashMap<String, TextureWithBlockState>) -> eyre::Result<Vec<u8>> {
+pub fn make_bytes(
+    block_width: usize,
+    cli_arguments: &CliArguments,
+    output_blocks: &Vec<Vec<String>>,
+    block_textures_and_states: &HashMap<String, TextureWithBlockState>
+) -> eyre::Result<Vec<u8>> {
     let block_count = block_width * cli_arguments.block_height;
 
     let air_block_list = vec!["air".to_string()];
 
+    // Unique list of all used textures as texture names
     let used_block_textures = air_block_list.iter()
         .chain(output_blocks.iter().flat_map(|column| column))
         .unique()
         .collect::<Vec<_>>();
 
+    // Map of texture name to used block state palette index
     let block_state_palette_by_texture = used_block_textures.iter()
         .enumerate()
         .map(|(index, &texture_name)| (texture_name, index))
         .collect::<HashMap<_, _>>();
 
+    // List of all used block state block ID and properties
     let block_states_info = used_block_textures.iter()
         .map(|&block_texture_name| (
             block_textures_and_states[block_texture_name].block_id.clone(),
